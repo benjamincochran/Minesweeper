@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            #board {
+                margin-top: 20px;        
+            }
+            
+            #board .row {
+                clear: left;
+                overflow: auto;
+                width: 100%;
+            }
+            
+            #board .cell {
+                border: 2px groove black;
+                cursor: pointer;
+                display: block;
+                float: left;
+                height: 20px;
+                padding: 0px;
+                position: relative;
+                text-align: center;
+                width: 20px;
+            }
+            
+            #board .cell:before {
+                content: attr(data-adjmines);
+                display: block;
+                font-size: 13px;
+                font-weight: bold;
+                line-height: 20px;
+                text-align: center;
+            }
+            
+            #board .cell:after {
+                background-color: silver;
+                border: 2px outset silver;
+                content: ".";
+                display: block;
+                font-size: 0px;
+                position: absolute;
+                top: 0; right: 0; bottom: 0; left: 0; 
+            }
+            
+            #board .cell.revealed {
+                cursor: default;
+            }
+            #board .cell.revealed:after {
+                display: none;
+            }
+            
+            #board .cell.revealed.mined:before {
+                background-color: red;
+                content: "\2620";
+                font-size: 20px;
+                font-weight: normal;
+            }
+            
+            #board .cell.flagged:after {
+                content: '\2691';
+                font-size: 12px;
+            }
+            
+            #board .cell.questioned:after {
+                content: "?";
+                font-size: 14px;
+            }
+        </style>
+        <script type="text/javascript" src="zepto.js"></script>
+    </head>
+    <body>
+        <form id="new-game" method="GET" action="">
+            <input type="number" name="rows" placeholder="Rows" min="3" maxlength="2" size="3" required/>
+            <input type="number" name="columns" placeholder="Columns" min="3" maxlength="2" size="3" required/>
+            <input type="number" name="mines" placeholder="Mines" min="1" maxlength="3" size="4" required/>
+            <button>New Game</button>
+            <span id="clock">00:00:00</span>
+        </form>
+        <div id="board"></div>
+        <script>
+            (function() {
+                var board = $('#board'), 
+                    newGameForm = $('#new-game'),
+                    gameMines = 0,
+                    gameRows,
+                    clockTimer,
+                    clock = $('#clock');
+                
+                function applyToSurroundingCells(cell, callback) {
+                    var i, j, 
+                	    cell = $(cell), 
+                	    row = cell.parent(),
+                	    cellIndex = cell.index(),
+                	    rowIndex = row.index(),
+                        rowStart = Math.max(0, rowIndex - 1),
+                        rowEnd = Math.min(gameRows.size() - 1, rowIndex + 1),
+                        cellStart = Math.max(0, cellIndex - 1);
+                	for (i = rowStart; i <= rowEnd; i++) {
+                    	cells = $($(gameRows).get(i)).children('.cell');
+                        for (j = cellStart; j <= Math.min(cells.size() - 1, cellIndex + 1); j++) {
+                        	if (i != rowIndex || j != cellIndex) {
+                        		callback($(gameRows.get(i)).children('.cell').get(j));
+                            }
+                        }
+                    }
+                }
+                
+                function recurseOpen(cell) {
+                	if ($(cell).hasClass('revealed')) {
+                		return;
+                	}
+                    $(cell).addClass('revealed');
+                	if ($(cell).data('adjmines') == "") {
+                    	applyToSurroundingCells(cell, recurseOpen);
+                	}
+                	else {
+                		return;
+                	}
+                }
+                
+                function zeroPad(val, length) {
+                	var val = val + "";
+                	while (val.length < length) {
+                		val = "0" + val;
+                	}
+                	return val;
+                }
+                
+                function generateBoard(rows, columns, mines) {
+                	var i, j, tempRow, tempCell, cellCount = rows * columns, mineChance = Math.min(mines, cellCount)/cellCount;
+                	gameMines = mines;
+                	console.timeStamp(rows, columns, mines);
+                	//create board
+                	console.timeStamp("creating board");
+                	board.empty();
+                	for (i = 0; i < rows; i++) {
+                		tempRow = $('<div class="row"></div>');
+                		for (j = 0; j < columns; j++) {
+                			tempCell = $('<div class="cell"></div>');
+                			tempRow.append(tempCell);
+                		}
+                		board.append(tempRow);
+                	}
+                    gameRows = board.find('.row');
+                    
+                	//place mines
+                	console.timeStamp("placing mines");
+                	while (mines) {
+                		board.find('.cell').each(function(index, cell) {
+                			if (Math.random() <= mineChance && mines) {
+                                cell.mined = true;
+                                mines--;
+                            }
+                		});
+                	}
+                	
+                	//add adjacent mine info
+                	console.timeStamp("adding adj info");
+                	gameRows.each(function(rowIndex, row) {
+                	    $(row).children('.cell').each(function(cellIndex, cell) {
+                	    	var adjMines = 0;
+                	    	applyToSurroundingCells(cell, function(adjCell) {
+                	    		if (adjCell.mined) {
+                	    			adjMines++;
+                	    		}
+                	    	});
+            	    	    $(cell).data('adjmines', adjMines || "");
+                	    });
+                	});
+                	
+                	//start the clock
+                	var clockPunch = (new Date()).getTime();
+                	window.clearInterval(clockTimer);
+                	clockTimer = window.setInterval(function() {
+                		var clockDiff = (new Date()).getTime() - clockPunch;
+                		clock.html(
+            				zeroPad(Math.floor(clockDiff/360000), 2) + ":" + 
+            				zeroPad(Math.floor(clockDiff/60000), 2) + ":" + 
+            				zeroPad(Math.floor(clockDiff/1000), 2)
+						);
+                	}, 1000);
+                }
+                
+                board.on('click', '.cell:not(.revealed)', function(e) {
+                    var cell = $(this);
+                    e.preventDefault();
+                    console.log(board.find('.cell:not(.revealed)').size(), gameMines);
+                    if (cell.prop('mined')) {
+                    	window.clearInterval(clockTimer);
+                        alert("BOOM");
+                        board.find('.cell').each(function(index, cell) {
+                        	if (cell.mined) {
+                        		$(cell).addClass('mined');
+                        	}
+                        	$(cell).addClass('revealed');
+                        });
+                    }
+                    else {
+                        recurseOpen(cell);
+                    }
+                    if (board.find('.cell:not(.revealed)').size() == gameMines) {
+                    	window.clearInterval(clockTimer);
+                        alert("WINNER WINNER CHICKEN DINNER");
+                    }
+                });
+                
+                board.on('contextmenu', '.cell:not(.revealed)', function(e) {
+                	var cell = $(this);
+                	if (cell.hasClass('flagged')) {
+                		cell.removeClass('flagged');
+                		cell.addClass('questioned');
+                	}
+                	else if (cell.hasClass('questioned')) {
+                		cell.removeClass('questioned');
+                	}
+                	else {
+                		cell.addClass('flagged');
+                	}
+                    e.preventDefault();
+                });
+                
+                newGameForm.on('submit', function(e) {
+                    console.timeStamp('submit');
+                    e.preventDefault();
+                    generateBoard(this.elements['rows'].value, this.elements['columns'].value, this.elements['mines'].value);
+                });
+            })();
+        </script>
+    </body>
+</html>
