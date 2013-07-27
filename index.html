@@ -175,9 +175,9 @@
                 	clockTimer = window.setInterval(function() {
                 		var clockDiff = (new Date()).getTime() - clockPunch;
                 		clock.html(
-            				zeroPad(Math.floor(clockDiff/360000), 2) + ":" + 
-            				zeroPad(Math.min(60, Math.floor((clockDiff/60000)%60)), 2) + ":" + 
-            				zeroPad(Math.min(60, Math.floor((clockDiff/1000)%60)), 2)
+            				zeroPad(Math.floor(clockDiff/3600000), 2) + ":" + 
+            				zeroPad(Math.min(59, Math.floor((clockDiff/60000)%60)), 2) + ":" + 
+            				zeroPad(Math.min(59, Math.floor((clockDiff/1000)%60)), 2)
 						);
                 	}, 1000);
                 }
