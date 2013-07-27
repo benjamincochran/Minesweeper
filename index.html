@@ -88,7 +88,7 @@
                     clock = $('#clock');
                 
                 function applyToSurroundingCells(cell, callback) {
-                	var i, j, 
+                    var i, j, 
                 	    cell = $(cell), 
                 	    row = cell.parent(),
                 	    cellIndex = cell.index(),
@@ -100,14 +100,14 @@
                     	cells = $($(gameRows).get(i)).children('.cell');
                         for (j = cellStart; j <= Math.min(cells.size() - 1, cellIndex + 1); j++) {
                         	if (i != rowIndex || j != cellIndex) {
-                        		callback($(gameRows.get(i)).children('.cell').get(j));
+                        		callback(cells.get(j));
                             }
                         }
                     }
                 }
                 
                 function recurseOpen(cell) {
-                	if ($(cell).hasClass('revealed')) {
+                	if ($(cell).hasClass('revealed') || cell.mined) {
                 		return;
                 	}
                     $(cell).addClass('revealed');
@@ -175,9 +175,9 @@
                 	clockTimer = window.setInterval(function() {
                 		var clockDiff = (new Date()).getTime() - clockPunch;
                 		clock.html(
-            				zeroPad(Math.min(60, Math.floor(clockDiff/360000)), 2) + ":" + 
-            				zeroPad(Math.min(60, Math.floor(clockDiff/60000)), 2) + ":" + 
-            				zeroPad(Math.min(60, Math.floor(clockDiff/1000)), 2)
+            				zeroPad(Math.min(60, Math.floor((clockDiff/360000)%24)), 2) + ":" + 
+            				zeroPad(Math.min(60, Math.floor((clockDiff/60000)%60)), 2) + ":" + 
+            				zeroPad(Math.min(60, Math.floor((clockDiff/1000)%60)), 2)
 						);
                 	}, 1000);
                 }
